@@ -1,0 +1,58 @@
+---
+title: "Weight Lifting Accuracy Prediction"
+output: html_document
+---
+
+### Summary
+
+This report analyzes the weight lifting data obtained by taking different measurements when a group of 6 fitness enthusiasts were asked to perform barbell lifts correctly and incorrectly in 5 different ways and builds a model by considering the data from  accelerometers on the belt, forearm, arm, and dumbell to predict how well a person does the weight lifting. How well a person does weight lifting is measured by classe variable that takes 6 values, namely, A,B,C,D,E,F with A being the best and F being the least.
+
+The data is partitioned into training and the test datasets based on the classe variable in the ratio of 90:10. As the data to be predicted is non linear, a simple decision tree model or a rain forest model can be employed. Rain forest model is applied to the dataset as it is more accurate. A 10 fold cross validation is employed to average the errors obtained by the prediction mdoel. The accuracy of the model is measured by applying the model fit to the test dataset and the out of sample error is calculated.
+
+### R Code for Model Fit
+```{r message=FALSE,cache=TRUE}
+## Load Training Dataset pml-training.csv
+
+pml<-read.csv("pml-training.csv")
+
+## Load the caret and randomForest packages
+library("caret")
+library("randomForest")
+
+## Set the seed
+set.seed(1000)
+
+## Subset the pml_training dataframe to have only acceleratometer measurement
+## and the classe variables. Exclude the variance variables
+
+pml<-pml[,c(grep("var",grep("acce",names(pml),value = TRUE),value = TRUE, invert = TRUE),"classe")]
+
+## Split the Dataset into training and test dataset
+
+trn<-createDataPartition(y = pml$classe,p = 0.9, list = FALSE)
+
+pml_training<-pml[trn,]
+
+pml_test<-pml[-trn,]
+
+## Apply random forest model to the training dataset with 10 fold cross validation
+trnctrl<-trainControl(method = "repeatedcv", number = 10)
+
+modelfit<-train(form = classe ~ . , data = pml_training, method = "rf",trControl=trnctrl)
+
+## Apply the model fit on the test dataset and calculate the accuracy and out of sample error
+test_predict<-predict(object = modelfit,newdata = pml_test)
+
+## Generate prediction table, get accuracy and out of sample error
+cnfsnmtrx<-confusionMatrix(test_predict,pml_test$classe)
+accu<-cnfsnmtrx$overall[[1]]*100
+smplerr<-(1 - cnfsnmtrx$overall[[1]])*100
+```
+
+### Prediction table
+```{r message=FALSE,cache=TRUE,echo=FALSE}
+cnfsnmtrx
+```
+
+#### The applied model has an accuracy of `r accu` percent on the test dataset. The out of sample error rate is `r smplerr` percent.
+
